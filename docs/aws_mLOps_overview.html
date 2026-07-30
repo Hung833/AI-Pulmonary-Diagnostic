@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tổng Quan Triển Khai MLOps trên AWS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9fafb;
+        }
+        h1, h2, h3 {
+            color: #232f3e;
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #ff9900;
+            padding-bottom: 10px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .architecture-box {
+            background-color: #eef2f6;
+            border-left: 5px solid #ff9900;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #232f3e;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .highlight {
+            color: #d13212;
+            font-weight: bold;
+        }
+        .step {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bức Tranh Tổng Thể: AI Pulmonary Diagnostic Suite trên AWS (MLOps)</h1>
+    
+    <div class="architecture-box">
+        <h2>1. Mục tiêu và Định hướng</h2>
+        <p>Chuyển đổi dự án chẩn đoán bệnh lý phổi hiện tại (dùng file cục bộ <code>.keras</code>, <code>.tflite</code>) thành một hệ thống AI cấp độ doanh nghiệp, hoạt động hoàn toàn trên môi trường Cloud (Cloud-native) của AWS.</p>
+        <p><strong>Lợi ích cốt lõi:</strong> Quản lý tập trung các phiên bản mô hình, tự động hóa quy trình huấn luyện với dữ liệu X-Quang mới, phục vụ dự đoán thời gian thực (Real-time Inference) và theo dõi độ chính xác (Data Drift).</p>
+    </div>
+
+    <h2>2. Sơ đồ Kiến trúc Đề xuất (Cấp độ cao)</h2>
+    <ul>
+        <li><strong>Bước 1 (Lưu trữ):</strong> Dữ liệu ảnh X-Quang được lưu bảo mật trên <strong>Amazon S3</strong>.</li>
+        <li><strong>Bước 2 (Huấn luyện & Đóng gói):</strong> <strong>Amazon SageMaker</strong> đọc dữ liệu từ S3, huấn luyện và chuyển đổi model (Keras/TFLite), lưu bản mới nhất vào <strong>SageMaker Model Registry</strong>.</li>
+        <li><strong>Bước 3 (Phục vụ Dự đoán):</strong> Backend không tải file trực tiếp nữa, mà gửi link ảnh X-Quang (hoặc Base64) qua <strong>Amazon API Gateway</strong> -> <strong>AWS Lambda</strong> -> gọi đến <strong>SageMaker Endpoint</strong> đang chạy model.</li>
+        <li><strong>Bước 4 (Giám sát):</strong> <strong>SageMaker Model Monitor</strong> giám sát chất lượng; <strong>CloudWatch</strong> ghi log lưu lượng sử dụng từ ứng dụng <code>app.py</code>.</li>
+    </ul>
+
+    <h2>3. Lộ trình Triển khai 8 Tuần</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Giai đoạn</th>
+                <th>Công việc đối với dự án Pulmonary Diagnostic</th>
+                <th>Dịch vụ AWS sử dụng</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Tuần 1-3</strong><br>Thiết lập Cơ sở & Chuyển dịch Dữ liệu</td>
+                <td>
+                    <div class="step">- Tạo Bucket lưu trữ ảnh X-Quang.</div>
+                    <div class="step">- Upload bộ script Python (`app.py`, script training) lên SageMaker Studio.</div>
+                    <div class="step">- Viết lại code huấn luyện để đọc dữ liệu Cloud thay vì đọc từ ổ cứng.</div>
+                </td>
+                <td>Amazon S3, IAM, SageMaker Studio, SageMaker Training Jobs</td>
+            </tr>
+            <tr>
+                <td><strong>Tuần 4</strong><br>Tối ưu hóa Mô hình (HPO)</td>
+                <td>
+                    <div class="step">- Thiết lập tự động dò tìm các tham số (Hyperparameters) lõi của thuật toán nhận diện phổi để tăng độ chính xác thay vì fine-tune thủ công.</div>
+                </td>
+                <td>SageMaker Automatic Model Tuning, SageMaker Experiments</td>
+            </tr>
+            <tr>
+                <td><strong>Tuần 5</strong><br>Kho lưu trữ Phiên bản Mô hình</td>
+                <td>
+                    <div class="step">- Đưa <code>pneumonia_model_finetuned.keras</code> vào Model Registry.</div>
+                    <div class="step">- Định nghĩa các thẻ đánh giá (Staging/Production) để biết model nào đang sẵn sàng sử dụng.</div>
+                </td>
+                <td>SageMaker Model Registry</td>
+            </tr>
+            <tr>
+                <td><strong>Tuần 6</strong><br>Triển khai API Dự đoán</td>
+                <td>
+                    <div class="step">- Deploy model (Version: Production) lên 1 Endpoint bảo mật.</div>
+                    <div class="step">- Viết một hàm trung gian kết nối `app.py` với Endpoint đó thông qua môi trường HTTP REST.</div>
+                </td>
+                <td>SageMaker Real-time Endpoint, AWS Lambda, API Gateway</td>
+            </tr>
+            <tr>
+                <td><strong>Tuần 7</strong><br>Giám sát Y tế (Data Drift)</td>
+                <td>
+                    <div class="step">- Phát hiện độ phân giải/màu sắc của các ảnh X-Quang mới có khác với dữ liệu huấn luyện hay không (Data Drift). Gửi cảnh báo để tái huấn luyện.</div>
+                </td>
+                <td>SageMaker Model Monitor, Amazon CloudWatch</td>
+            </tr>
+            <tr>
+                <td><strong>Tuần 8</strong><br>Tự động hóa toàn phần (CI/CD/CT)</td>
+                <td>
+                    <div class="step">- Tổ hợp toàn bộ Cấu hình -> Huấn luyện -> Đánh giá -> Triển khai thành một luồng (Pipeline) duy nhất. Cứ có rổ X-Quang mới là mô hình tự học lại.</div>
+                </td>
+                <td>SageMaker Pipelines</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="architecture-box">
+        <h2>4. Định hướng cho TFLite (IoT / Edge Devices)</h2>
+        <p>Bạn đã có sẵn <code>pneumonia_model.tflite</code>. Trong môi trường AWS, chúng ta có thể sử dụng <strong>AWS IoT Greengrass</strong> kết hợp <strong>SageMaker Neo</strong> để đẩy file tflite này trực tiếp xuống các máy siêu âm/X-quang di động tại các trạm biên (Edge), giúp chẩn đoán ngay khi không có kết nối mạng (hoạt động offline).</p>
+    </div>
+</div>
+
+</body>
+</html>
